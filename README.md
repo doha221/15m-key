@@ -20,6 +20,35 @@ npm run replay -- 2026-05-12    # replay break của ngày bất kỳ (YYYY-MM-D
 npm test                        # unit test
 ```
 
+## Production với PM2
+
+Cài pm2 toàn cục cho Node 20:
+
+```bash
+nvm use 20
+npm install -g pm2
+```
+
+Chạy:
+
+```bash
+npm run pm2:start      # khởi động background process
+npm run pm2:logs       # xem log realtime
+npm run pm2:status     # xem trạng thái
+npm run pm2:restart    # restart sau khi đổi code/.env
+npm run pm2:stop       # dừng
+```
+
+Auto-start khi reboot máy (chỉ chạy 1 lần):
+
+```bash
+pm2 startup            # in ra 1 lệnh sudo, copy chạy theo hướng dẫn
+npm run pm2:start
+pm2 save               # lưu danh sách process để restart sau reboot
+```
+
+Log nằm trong `./logs/{out,err}.log`.
+
 ## Thiết kế
 
 Xem [docs/superpowers/specs/2026-05-13-15m-key-design.md](docs/superpowers/specs/2026-05-13-15m-key-design.md).

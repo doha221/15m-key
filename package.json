@@ -11,6 +11,11 @@
     "start": "tsx src/index.ts",
     "dry-run": "tsx src/index.ts --dry-run",
     "replay": "tsx src/replay.ts",
+    "pm2:start": "pm2 start ecosystem.config.cjs",
+    "pm2:stop": "pm2 stop 15m-key",
+    "pm2:restart": "pm2 restart 15m-key",
+    "pm2:logs": "pm2 logs 15m-key",
+    "pm2:status": "pm2 status 15m-key",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
