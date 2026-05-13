@@ -40,6 +40,32 @@ export async function fetchKeyCandle(symbol: string, openTimeUtcMs: number): Pro
   throw lastErr instanceof Error ? lastErr : new Error('fetchKeyCandle failed');
 }
 
+export interface ClosedKline {
+  openTime: number;
+  closeTime: number;
+  close: number;
+}
+
+export async function fetchClosedKlines(
+  symbol: string,
+  interval: '3m' | '5m',
+  startTimeMs: number,
+  endTimeMs: number,
+): Promise<ClosedKline[]> {
+  const url = `${FUTURES_REST}/fapi/v1/klines?symbol=${symbol}&interval=${interval}&startTime=${startTimeMs}&endTime=${endTimeMs}&limit=1000`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`binance ${res.status}: ${await res.text()}`);
+  const arr = (await res.json()) as unknown[][];
+  const nowMs = Date.now();
+  return arr
+    .map((row) => ({
+      openTime: Number(row[0]),
+      closeTime: Number(row[6]),
+      close: parseFloat(row[4] as string),
+    }))
+    .filter((k) => k.closeTime < nowMs);
+}
+
 export interface KlineCloseEvent {
   interval: '3m' | '5m';
   close: number;

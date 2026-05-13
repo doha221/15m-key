@@ -13,9 +13,11 @@ npm install
 ## Chạy
 
 ```bash
-npm start          # chạy nền, scheduler bật cron 07:15 VN hàng ngày
-npm run dry-run    # chạy ngay 1 lần với telegram in ra console
-npm test           # unit test
+npm start                       # chạy nền, scheduler bật cron 07:15 VN hàng ngày
+npm run dry-run                 # chạy ngay 1 lần với telegram in ra console
+npm run replay                  # replay break của hôm nay (in ra console)
+npm run replay -- 2026-05-12    # replay break của ngày bất kỳ (YYYY-MM-DD)
+npm test                        # unit test
 ```
 
 ## Thiết kế
