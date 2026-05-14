@@ -18,7 +18,7 @@ export interface ClassifyResult {
   state: BreakState;
 }
 
-const MAX_BREAKS = 3;
+const MAX_BREAKS = 1;
 
 export function initState(): BreakState {
   return { count3m: 0, count5m: 0, done3m: false, done5m: false };

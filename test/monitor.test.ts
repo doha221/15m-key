@@ -26,17 +26,16 @@ describe('classifyBreak', () => {
     expect(result.state.count5m).toBe(1);
   });
 
-  it('counts independently and stops at 3 per timeframe', () => {
+  it('one break per timeframe sets done; counts independently', () => {
     let state: BreakState = initState();
-    const closes3m: number[] = [101, 102, 89]; // 3 breaks (2 up, 1 down)
-    for (const c of closes3m) state = classifyBreak(state, '3m', key, c).state;
-    expect(state.count3m).toBe(3);
+    state = classifyBreak(state, '3m', key, 101).state;
+    expect(state.count3m).toBe(1);
     expect(state.done3m).toBe(true);
     expect(state.done5m).toBe(false);
 
-    // Further 3m events still classify but should not be relied on; consumer must check done3m first
-    state = classifyBreak(state, '5m', key, 101).state;
+    state = classifyBreak(state, '5m', key, 89).state;
     expect(state.count5m).toBe(1);
+    expect(state.done5m).toBe(true);
   });
 
   it('boundary values: close == high is in_range; close == low is in_range', () => {
