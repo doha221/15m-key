@@ -1,10 +1,11 @@
 import cron from 'node-cron';
 import { loadConfig } from './config.ts';
 import { createTelegramClient } from './telegram.ts';
-import { fetchKeyCandle, subscribeKlines, type Kline, type KlineSubscription } from './binance.ts';
+import { fetchKeyCandle, fetchClosedKlines, type Kline } from './binance.ts';
 import { initState, classifyBreak, allDone, type BreakState, type KeyRange, type Interval } from './monitor.ts';
 
 const VN_TZ = 'Asia/Ho_Chi_Minh';
+const POLL_INTERVAL_MS = 30_000;
 
 function formatKeyMessage(symbol: string, k: Kline): string {
   const d = new Date(k.openTime);
@@ -50,7 +51,11 @@ async function runOnce(config: ReturnType<typeof loadConfig>) {
 
   let state: BreakState = initState();
   const keyRange: KeyRange = { high: key.high, low: key.low };
-  const subs: Partial<Record<Interval, KlineSubscription>> = {};
+  const keyCloseMs = openTimeMs + 15 * 60 * 1000;
+  const lastSeenCloseTime: Record<Interval, number> = {
+    '3m': keyCloseMs - 1,
+    '5m': keyCloseMs - 1,
+  };
 
   const handleClose = async (interval: Interval, close: number) => {
     if (interval === '3m' && state.done3m) return;
@@ -63,20 +68,38 @@ async function runOnce(config: ReturnType<typeof loadConfig>) {
     const count = interval === '3m' ? state.count3m : state.count5m;
     await tg.send(formatBreakMessage(interval, res.action, close, keyRange, count));
 
-    if (interval === '3m' && state.done3m) subs['3m']?.close();
-    if (interval === '5m' && state.done5m) subs['5m']?.close();
-
     if (allDone(state)) {
-      console.log('[main] both timeframes done; waiting for next day');
+      console.log('[main] both timeframes done; stopping poll');
     }
   };
 
-  subs['3m'] = subscribeKlines(config.symbol, '3m', (ev) => {
-    void handleClose('3m', ev.close);
-  });
-  subs['5m'] = subscribeKlines(config.symbol, '5m', (ev) => {
-    void handleClose('5m', ev.close);
-  });
+  let timer: NodeJS.Timeout | null = null;
+
+  const poll = async () => {
+    if (allDone(state)) {
+      if (timer) { clearInterval(timer); timer = null; }
+      return;
+    }
+    const now = Date.now();
+    for (const interval of ['3m', '5m'] as const) {
+      if (interval === '3m' && state.done3m) continue;
+      if (interval === '5m' && state.done5m) continue;
+      try {
+        const candles = await fetchClosedKlines(config.symbol, interval, lastSeenCloseTime[interval] + 1, now);
+        for (const c of candles) {
+          if (c.closeTime <= lastSeenCloseTime[interval]) continue;
+          lastSeenCloseTime[interval] = c.closeTime;
+          await handleClose(interval, c.close);
+        }
+      } catch (err) {
+        console.error(`[poll] ${interval} fetch failed`, err);
+      }
+    }
+  };
+
+  // Catch-up immediately for any candles already closed since key, then poll every 30s.
+  await poll();
+  timer = setInterval(() => { void poll(); }, POLL_INTERVAL_MS);
 }
 
 async function main() {
